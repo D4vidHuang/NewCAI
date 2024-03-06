@@ -632,7 +632,7 @@ class ArtificialBrain(ArtificialAgentBrain, ABC):
         '''
         Agents must override decide_on_actions instead. Define obstacle removal durations.
         '''
-        act,params = self.decide_on_actions(state)
+        act, params = self.decide_on_actions(state)
         params['grab_range']=1
         params['max_objects']=1
         # find state locations with water
