@@ -496,6 +496,8 @@ class BaselineAgent(ArtificialBrain):
                             -1] == 'Continue' and not self._remove:
                             self._answered = True
                             self._waiting = False
+                            #有continue就是懒逼
+                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 3)
                             # Add area to the to do list
                             self._to_search.append(self._door['room_name'])
                             self._phase = Phase.FIND_NEXT_GOAL
@@ -545,6 +547,7 @@ class BaselineAgent(ArtificialBrain):
                                 -1] == 'Continue' and not self._remove:
                                 self._answered = True
                                 self._waiting = False
+                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 3)
                                 # Add area to the to do list
                                 self._to_search.append(self._door['room_name'])
                                 self._phase = Phase.FIND_NEXT_GOAL
@@ -585,8 +588,11 @@ class BaselineAgent(ArtificialBrain):
                             print(self.human_searched_rooms)
 
                         # Diff:信任的话
+                        #这里是小石头的，小石头就是比较慢所以机器人更倾向于俩人一起，能力大于0.0就行
+                        #然后在是不是懒逼方面，如果人近的话大于0.0，如果人远的话大于0.5
                         if (trustBeliefs[self._human_name]['competence'] > 0.0 and trustBeliefs[self._human_name][
-                                'willingness'] > 0.0):
+                                'willingness'] > 0.5 and self._distance_human == 'far') or (trustBeliefs[self._human_name]['competence'] > 0.0 and trustBeliefs[self._human_name][
+                                'willingness'] > 0.0 and self._distance_human == 'close'):
                             # Communicate which obstacle is blocking the entrance
                             if self._answered == False and not self._remove and not self._waiting:
                                 #if willingness>0.5 else do it alone
@@ -604,6 +610,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._answered = True
                                 self._waiting = False
                                 # Add area to the to do list
+                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 3)
                                 self._to_search.append(self._door['room_name'])
                                 self._phase = Phase.FIND_NEXT_GOAL
                             # Remove the obstacle alone if the human decides so
@@ -775,9 +782,11 @@ class BaselineAgent(ArtificialBrain):
                                 # Communicate which victim the agent found and ask the human whether to rescue the victim now or at a later stage
                                 if 'mild' in vic and self._answered == False and not self._waiting:
                                     #Diff: 如果相信
-
+                                    #救轻伤这件事对于能力要求低，所以只要大于0.0就行
+                                    #但是是不是懒逼这个受到距离影响
                                     if (trustBeliefs[self._human_name]['competence'] > 0.0 and trustBeliefs[self._human_name][
-                                        'willingness'] > 0.0):
+                                        'willingness'] > 0.5 and self._distance_human == 'far') or (trustBeliefs[self._human_name]['competence'] > 0.0 and trustBeliefs[self._human_name][
+                                        'willingness'] > 0.0 and self._distance_human == 'close'):
 
                                         self._send_message('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
                                             Important features to consider are: \n safe - victims rescued: ' + str(
@@ -1188,7 +1197,8 @@ class BaselineAgent(ArtificialBrain):
         # Create a dictionary with trust values for all team members
         trustBeliefs = {}
         # Set a default starting trust value
-        default = 0.5
+        #在这个地方我把初值改为1了，这样的话就会人一开始是非常信任的
+        default = 1
         trustfile_header = []
         trustfile_contents = []
         # Check if agent already collaborated with this human before, if yes: load the corresponding trust values, if no: initialize using default trust values
@@ -1216,11 +1226,21 @@ class BaselineAgent(ArtificialBrain):
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
         if (score == 1):
-            trustBeliefs[self._human_name]['competence'] += 0.10
-            trustBeliefs[self._human_name]['willingness'] += 0.10
+            trustBeliefs[self._human_name]['competence'] += 0.20
+            trustBeliefs[self._human_name]['willingness'] += 0.20
         elif (score == 2):
             trustBeliefs[self._human_name]['competence'] -= 0.10
             trustBeliefs[self._human_name]['willingness'] -= 0.10
+        elif (score == 3):
+            trustBeliefs[self._human_name]['competence'] -= 0.00
+            trustBeliefs[self._human_name]['willingness'] -= 0.20
+        # elif (score == 4):
+        #     trustBeliefs[self._human_name]['competence'] -= 0.20
+        #     trustBeliefs[self._human_name]['willingness'] -= 0.00
+
+            #我做的简单对应：competence == 能力，willingness == 懒逼
+            #这里的逻辑是：2是撒谎，能力不行还懒   3是偷懒，我不知道能力行不行但是肯定是懒人，  4是机器人认为人能力不行，就是在人让机器人帮忙的地方
+            #1是加分
         # data = []
         # with open(folder + '/beliefs/allTrustBeliefs.csv', mode='r') as csv_file:
         #     csv_reader = csv.reader(csv_file, delimiter=';', quotechar='"')
