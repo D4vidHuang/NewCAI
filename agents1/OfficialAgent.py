@@ -130,7 +130,7 @@ class BaselineAgent(ArtificialBrain):
         # self._process_messages(state, self._team_members, self._condition)
         # Initialize and update trust beliefs for team members
         trustBeliefs = self._loadBelief(self._team_members, self._folder)
-        print(trustBeliefs[self._human_name]['competence'], trustBeliefs[self._human_name]['willingness'])
+        # print(trustBeliefs[self._human_name]['competence'], trustBeliefs[self._human_name]['willingness'])
         self._trustBelief(self._team_members, trustBeliefs, self._folder, 0)
         # Process messages from team members
         self._process_messages(state, self._team_members, self._condition, trustBeliefs, self._human_name)
@@ -741,7 +741,7 @@ class BaselineAgent(ArtificialBrain):
                                 # decrease trust
                                 if self._door['room_name'] in self.human_searched_rooms:
                                     self.human_searched_rooms.remove(self._door['room_name'] )
-                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
+                                trustBeliefs = self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
                                 print("走到了 --------------  3")
                                 print("检查发现地点是否与人报告相同，检查发现人员是否已被人类声明已经救了")
                                 self._todo.append(vic)
@@ -1192,7 +1192,7 @@ class BaselineAgent(ArtificialBrain):
         trustfile_header = []
         trustfile_contents = []
         # Check if agent already collaborated with this human before, if yes: load the corresponding trust values, if no: initialize using default trust values
-        with open(folder + '/beliefs/allTrustBeliefs.csv') as csvfile:
+        with open(folder + '/beliefs/currentTrustBelief.csv') as csvfile:
             reader = csv.reader(csvfile, delimiter=';', quotechar="'")
             for row in reader:
                 if trustfile_header == []:
@@ -1221,20 +1221,22 @@ class BaselineAgent(ArtificialBrain):
         elif (score == 2):
             trustBeliefs[self._human_name]['competence'] -= 0.10
             trustBeliefs[self._human_name]['willingness'] -= 0.10
-        data = []
-        with open(folder + '/beliefs/allTrustBeliefs.csv', mode='r') as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=';', quotechar='"')
-            for row in csv_reader:
-                data.append(row)
-        print(data)
-        print(trustBeliefs)
-        data[-1] = trustBeliefs
+        # data = []
+        # with open(folder + '/beliefs/allTrustBeliefs.csv', mode='r') as csv_file:
+        #     csv_reader = csv.reader(csv_file, delimiter=';', quotechar='"')
+        #     for row in csv_reader:
+        #         data.append(row)
+        # # print(data)
+        # data[-1] = [self._human_name, trustBeliefs[self._human_name]['competence'],
+        #                      trustBeliefs[self._human_name]['willingness']]
+        # data = data[1:]
+        # print(data)
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
-        with open(folder + '/beliefs/allTrustBeliefs.csv', mode='w') as csv_file:
+        with open(folder + '/beliefs/currentTrustBeliefs.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(['name', 'competence', 'willingness'])
-            csv_writer.writerows(data)
-
+            csv_writer.writerow([self._human_name, trustBeliefs[self._human_name]['competence'],
+                              trustBeliefs[self._human_name]['willingness']])
         return trustBeliefs
 
     def _send_message(self, mssg, sender):

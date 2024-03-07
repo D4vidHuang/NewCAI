@@ -21,7 +21,7 @@ if __name__ == "__main__":
         choice3=input()
         if choice3=='normal' or choice3=='strong' or choice3=='weak':
             builder = create_builder(task_type=choice1, condition=choice3, name=choice2, folder=fld)
-        else:
+
             print("\nWrong condition name entered")
 
     # Start overarching MATRX scripts and threads, such as the api and/or visualizer if requested. Here we also link our own media resource folder with MATRX.
