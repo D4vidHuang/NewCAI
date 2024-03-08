@@ -98,7 +98,7 @@ class BaselineAgent(ArtificialBrain):
 
         self.human_collected_victims = []
         self.human_collected_victim_logs = {}
-        self.test_human = False
+        self.test_human = 0
 
         self.initial_competence = 0
         self.initial_willingness = 0
@@ -255,11 +255,11 @@ class BaselineAgent(ArtificialBrain):
                         self._remainingZones = remaining_zones
                         self._remaining = remaining
                         # DiffToDo: decrease trust here
-                        if not self.test_human:
+                        if self.test_human == 0:
                             self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
                             print("走到了 --------------  2")
                             print("如果房间搜完但分数不够，则查询human found的vicitms")
-                        self.test_human = True
+                        self.test_human += 1
 
 
                 # Check which victims can be rescued next because human or agent already found them
@@ -316,7 +316,7 @@ class BaselineAgent(ArtificialBrain):
                 #diff: 优先搜索human searched rooms
                 # print(self.test_human)
                 # print(len(unsearched_rooms))
-                if (self.test_human and len(unsearched_rooms) == 0) and len(self.human_searched_rooms) != 0:
+                if (self.test_human > 0 and len(unsearched_rooms) == 0) and len(self.human_searched_rooms) != 0:
 
                     for room in self.human_searched_rooms:
                         unsearched_rooms.append(room)
@@ -396,14 +396,14 @@ class BaselineAgent(ArtificialBrain):
 
             if Phase.FOLLOW_PATH_TO_ROOM == self._phase:
                 # Check if the previously identified target victim was rescued by the human
-                if not self.test_human and self._goal_vic and self._goal_vic in self._collected_victims:
+                if self.test_human == 0 and self._goal_vic and self._goal_vic in self._collected_victims:
                     print("进了这个if")
                     # Reset current door and switch to finding the next goal
                     self._current_door = None
                     self._phase = Phase.FIND_NEXT_GOAL
 
                 # Check if the human found the previously identified target victim in a different room
-                if not self.test_human and self._goal_vic \
+                if self.test_human == 0 and self._goal_vic \
                         and self._goal_vic in self._found_victims \
                         and self._door['room_name'] != self._found_victim_logs[self._goal_vic]['room']:
                     print("进了第二个if")
@@ -411,7 +411,7 @@ class BaselineAgent(ArtificialBrain):
                     self._phase = Phase.FIND_NEXT_GOAL
 
                 # Check if the human already searched the previously identified area without finding the target victim
-                if not self.test_human and self._door['room_name'] in self._searched_rooms and self._goal_vic not in self._found_victims:
+                if self.test_human == 0 and self._door['room_name'] in self._searched_rooms and self._goal_vic not in self._found_victims:
                     print("进了第三个if")
                     self._current_door = None
                     self._phase = Phase.FIND_NEXT_GOAL
@@ -474,7 +474,7 @@ class BaselineAgent(ArtificialBrain):
                         'obj_id']:
                         objects.append(info)
                         # diff decrease trust
-                        if (self.test_human and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
+                        if (self.test_human > 0 and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
                             self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
                             # self.human_searched_rooms.remove(self._door['room_name'])
                             print("如果有障碍物但人说搜过了")
@@ -525,7 +525,7 @@ class BaselineAgent(ArtificialBrain):
                         objects.append(info)
 
                         # diff decrease trust
-                        if (self.test_human and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
+                        if (self.test_human > 0 and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
                             self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
                             # self.human_searched_rooms.remove(self._door['room_name'])
                             print("如果有障碍物但人说搜过了")
@@ -581,7 +581,7 @@ class BaselineAgent(ArtificialBrain):
                         objects.append(info)
 
                         # diff decrease trust
-                        if (self.test_human and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
+                        if (self.test_human > 0 and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
                             self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
                             #self.human_searched_rooms.remove(self._door['room_name'])
                             print("如果有障碍物但人说搜过了")
@@ -689,7 +689,7 @@ class BaselineAgent(ArtificialBrain):
                     self._phase = Phase.PLAN_ROOM_SEARCH_PATH
 
                 #diff 搜索人声明搜索过的房间如果当前状态为testhuman
-                if self.test_human and self._door['room_name'] in self.human_searched_rooms:
+                if self.test_human > 0 and self._door['room_name'] in self.human_searched_rooms:
                     self.human_searched_rooms.remove(self._door['room_name'])
 
                     self._state_tracker.update(state)
@@ -736,7 +736,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._room_vics.append(vic)
 
                             # DiffToDo: 检查发现地点是否与人报告相同，检查发现人员是否已被人类声明已经救了
-                            if (self.test_human and ((vic in self.human_found_victims and self._door['room_name'] != self.human_found_victim_logs[vic]['room']) or \
+                            if (self.test_human > 0 and ((vic in self.human_found_victims and self._door['room_name'] != self.human_found_victim_logs[vic]['room']) or \
                                     vic in self.human_collected_victims)):
                                 if(vic in self.human_collected_victims):
                                     self.human_collected_victim_logs.pop(vic, None)
@@ -1229,11 +1229,11 @@ class BaselineAgent(ArtificialBrain):
             trustBeliefs[self._human_name]['competence'] += 0.20
             trustBeliefs[self._human_name]['willingness'] += 0.20
         elif (score == 2):
-            trustBeliefs[self._human_name]['competence'] -= 0.10
-            trustBeliefs[self._human_name]['willingness'] -= 0.10
+            trustBeliefs[self._human_name]['competence'] -= 0.10 * self.test_human
+            trustBeliefs[self._human_name]['willingness'] -= 0.10 * self.test_human
         elif (score == 3):
             trustBeliefs[self._human_name]['competence'] -= 0.00
-            trustBeliefs[self._human_name]['willingness'] -= 0.20
+            trustBeliefs[self._human_name]['willingness'] -= 0.20 * self.test_human
         # elif (score == 4):
         #     trustBeliefs[self._human_name]['competence'] -= 0.20
         #     trustBeliefs[self._human_name]['willingness'] -= 0.00
