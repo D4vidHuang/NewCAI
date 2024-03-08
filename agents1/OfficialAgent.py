@@ -21,7 +21,7 @@ from actions1.CustomActions import RemoveObjectTogether, CarryObjectTogether, Dr
         个时候才发生减分的情况。同理如果齐了就加分。当然这个里面还有其他的情况也要考虑，例如人说了别的
         真话。"""
 
-
+MOD: int = 1
 
 class Phase(enum.Enum):
     INTRO = 1,
@@ -104,7 +104,7 @@ class BaselineAgent(ArtificialBrain):
         self.initial_willingness = 0
 
         self.acc_waiting_time = 0
-        self.prev_tick
+        self.prev_tick = 0
 
 
     def initialize(self):
@@ -546,8 +546,8 @@ class BaselineAgent(ArtificialBrain):
                             print(self.human_searched_rooms)
 
                         #Diff:信任的话
-                        if (trustBeliefs[self._human_name]['competence'] > 0.0 and trustBeliefs[self._human_name][
-                            'willingness'] > 0.0):
+                        if (trustBeliefs[self._human_name]['competence'] > 0.0 + self.test_human * 0.1 and trustBeliefs[self._human_name][
+                            'willingness'] > self.test_human * 0.1):
                         # Communicate which obstacle is blocking the entrance
                             if self._answered == False and not self._remove and not self._waiting:
                                 self._send_message('Found tree blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
@@ -605,9 +605,9 @@ class BaselineAgent(ArtificialBrain):
                         # Diff:信任的话
                         #这里是小石头的，小石头就是比较慢所以机器人更倾向于俩人一起，能力大于0.0就行
                         #然后在是不是懒逼方面，如果人近的话大于0.0，如果人远的话大于0.5
-                        if (trustBeliefs[self._human_name]['competence'] > 0.0 and trustBeliefs[self._human_name][
-                                'willingness'] > 0.5 and self._distance_human == 'far') or (trustBeliefs[self._human_name]['competence'] > 0.0 and trustBeliefs[self._human_name][
-                                'willingness'] > 0.0 and self._distance_human == 'close'):
+                        if (trustBeliefs[self._human_name]['competence'] > 0.0 + self.test_human * 0.1 and trustBeliefs[self._human_name][
+                                'willingness'] > 0.5 + self.test_human * 0.1 and self._distance_human == 'far') or (trustBeliefs[self._human_name]['competence'] > 0.0 + self.test_human * 0.1 and trustBeliefs[self._human_name][
+                                'willingness'] > 0.0 + self.test_human * 0.1 and self._distance_human == 'close'):
                             # Communicate which obstacle is blocking the entrance
                             if self._answered == False and not self._remove and not self._waiting:
                                 #if willingness>0.5 else do it alone
@@ -1241,12 +1241,23 @@ class BaselineAgent(ArtificialBrain):
         '''
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
-        if (score == 1):
-            trustBeliefs[self._human_name]['competence'] += 0.20
-            trustBeliefs[self._human_name]['willingness'] += 0.20
-        elif (score == 2):
-            trustBeliefs[self._human_name]['competence'] -= dc * self.test_human
-            trustBeliefs[self._human_name]['willingness'] -= dc * self.test_human
+
+        if MOD == 1: # Never believe
+            trustBeliefs[self._human_name]['competence'] = -1
+            trustBeliefs[self._human_name]['willingness'] = -1
+        elif MOD == 2:
+            trustBeliefs[self._human_name]['competence'] = 1
+            trustBeliefs[self._human_name]['willingness'] = 1
+        elif MOD == 3:
+            trustBeliefs[self._human_name]['competence'] = np.random.rand() * 2 - 1
+            trustBeliefs[self._human_name]['willingness'] = np.random.rand() * 2 - 1
+        else:
+            if (score == 1):
+                trustBeliefs[self._human_name]['competence'] += 0.20
+                trustBeliefs[self._human_name]['willingness'] += 0.20
+            elif (score == 2):
+                trustBeliefs[self._human_name]['competence'] -= dc * self.test_human
+                trustBeliefs[self._human_name]['willingness'] -= dc * self.test_human
         # elif (score == 4):
         #     trustBeliefs[self._human_name]['competence'] -= 0.20
         #     trustBeliefs[self._human_name]['willingness'] -= 0.00
