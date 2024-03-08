@@ -21,7 +21,7 @@ from actions1.CustomActions import RemoveObjectTogether, CarryObjectTogether, Dr
         个时候才发生减分的情况。同理如果齐了就加分。当然这个里面还有其他的情况也要考虑，例如人说了别的
         真话。"""
 
-MOD: int = 1
+MOD: int = 0
 
 class Phase(enum.Enum):
     INTRO = 1,
@@ -120,11 +120,6 @@ class BaselineAgent(ArtificialBrain):
     def decide_on_actions(self, state):
         cur_tick = state['World']['nr_ticks']
         # Identify team members
-        if self._waiting: self.acc_waiting_time += (cur_tick - self.prev_tick)
-        else: self.acc_waiting_time = 0
-        if self.acc_waiting_time >= 100:
-            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.05, dc=0.05)
-            self.acc_waiting_time = 0
 
         agent_name = state[self.agent_id]['obj_id']
         for member in state['World']['team_members']:
@@ -164,6 +159,12 @@ class BaselineAgent(ArtificialBrain):
             self._distance_drop = 'far'
         if self._agent_loc in [3, 4, 7, 10, 13, 14]:
             self._distance_drop = 'close'
+        
+        if self._waiting: self.acc_waiting_time += (cur_tick - self.prev_tick)
+        else: self.acc_waiting_time = 0
+        if self.acc_waiting_time >= 100:
+            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.05, dc=0.05)
+            self.acc_waiting_time = 0
 
         # Check whether victims are currently being carried together by human and agent
         self.prev_tick = cur_tick
@@ -511,7 +512,7 @@ class BaselineAgent(ArtificialBrain):
                             #有continue就是懒逼
                             #AlbertDiff: 如果人距离远的话，不忙帮搬是正常的，这里可以套用他给的论文里关于环境的影响，是客观。
                             if self._distance_human == 'close': 
-                                self._trustBelief(self._team_members, trustBeliefs, self._folder, dw=0.30, dc=0.30)
+                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.30, dc=0.30)
                             # Add area to the to do list
                             self._to_search.append(self._door['room_name'])
                             self._phase = Phase.FIND_NEXT_GOAL
@@ -1258,6 +1259,10 @@ class BaselineAgent(ArtificialBrain):
             elif (score == 2):
                 trustBeliefs[self._human_name]['competence'] -= dc * self.test_human
                 trustBeliefs[self._human_name]['willingness'] -= dc * self.test_human
+
+        for n in ['competence', 'willingness']:
+            if trustBeliefs[self._human_name][n] > 1: trustBeliefs[self._human_name][n] =1
+            if trustBeliefs[self._human_name][n] < -1: trustBeliefs[self._human_name][n] =-1
         # elif (score == 4):
         #     trustBeliefs[self._human_name]['competence'] -= 0.20
         #     trustBeliefs[self._human_name]['willingness'] -= 0.00
@@ -1276,7 +1281,7 @@ class BaselineAgent(ArtificialBrain):
         # data = data[1:]
         # print(data)
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
-        with open(folder + '/beliefs/currentTrustBeliefs.csv', mode='w') as csv_file:
+        with open(folder + '/beliefs/currentTrustBelief.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(['name', 'competence', 'willingness'])
             csv_writer.writerow([self._human_name, trustBeliefs[self._human_name]['competence'],
