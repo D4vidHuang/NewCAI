@@ -1,0 +1,2 @@
+alice x alg = 9:31, (1,1)
+alice x all trust = 9.46 (1,1)

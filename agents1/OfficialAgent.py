@@ -21,7 +21,7 @@ from actions1.CustomActions import RemoveObjectTogether, CarryObjectTogether, Dr
         个时候才发生减分的情况。同理如果齐了就加分。当然这个里面还有其他的情况也要考虑，例如人说了别的
         真话。"""
 
-MOD: int = 0
+MOD: int = 3
 
 class Phase(enum.Enum):
     INTRO = 1,
@@ -105,6 +105,7 @@ class BaselineAgent(ArtificialBrain):
 
         self.acc_waiting_time = 0
         self.prev_tick = 0
+        self.rnd_t = tmp = np.random.rand() * 2 - 1
 
 
     def initialize(self):
@@ -1250,8 +1251,9 @@ class BaselineAgent(ArtificialBrain):
             trustBeliefs[self._human_name]['competence'] = 1
             trustBeliefs[self._human_name]['willingness'] = 1
         elif MOD == 3:
-            trustBeliefs[self._human_name]['competence'] = np.random.rand() * 2 - 1
-            trustBeliefs[self._human_name]['willingness'] = np.random.rand() * 2 - 1
+            tmp = np.random.rand() * 2 - 1
+            trustBeliefs[self._human_name]['competence'] = self.rnd_t
+            trustBeliefs[self._human_name]['willingness'] = self.rnd_t
         else:
             if (score == 1):
                 trustBeliefs[self._human_name]['competence'] += 0.20

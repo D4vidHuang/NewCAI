@@ -1,2 +1,5 @@
 name;competence;willingness
 alice;0.5;0.5
+alice;1.0;1.0
+alice;1;1
+alice;-1;-1
