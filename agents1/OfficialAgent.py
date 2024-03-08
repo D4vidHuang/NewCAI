@@ -103,6 +103,9 @@ class BaselineAgent(ArtificialBrain):
         self.initial_competence = 0
         self.initial_willingness = 0
 
+        self.acc_waiting_time = 0
+        self.prev_tick
+
 
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -115,7 +118,14 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
+        cur_tick = state['World']['nr_ticks']
         # Identify team members
+        if self._waiting: self.acc_waiting_time += (cur_tick - self.prev_tick)
+        else: self.acc_waiting_time = 0
+        if self.acc_waiting_time >= 100:
+            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.05, dc=0.05)
+            self.acc_waiting_time = 0
+
         agent_name = state[self.agent_id]['obj_id']
         for member in state['World']['team_members']:
             if member != agent_name and member not in self._team_members:
@@ -156,6 +166,7 @@ class BaselineAgent(ArtificialBrain):
             self._distance_drop = 'close'
 
         # Check whether victims are currently being carried together by human and agent
+        self.prev_tick = cur_tick
         for info in state.values():
             # if 'is_goal_block' in info and :
 
@@ -256,7 +267,7 @@ class BaselineAgent(ArtificialBrain):
                         self._remaining = remaining
                         # DiffToDo: decrease trust here
                         if self.test_human == 0:
-                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
+                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.30, dc=0.10)
                             print("走到了 --------------  2")
                             print("如果房间搜完但分数不够，则查询human found的vicitms")
                         self.test_human += 1
@@ -475,7 +486,8 @@ class BaselineAgent(ArtificialBrain):
                         objects.append(info)
                         # diff decrease trust
                         if (self.test_human > 0 and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
-                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
+                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=-0.50, dc=0.10)
+                            # Albert Diff: 你这是严重把我当傻子，不想干就不想干忽悠人干嘛，严重扣你的willingness 分
                             # self.human_searched_rooms.remove(self._door['room_name'])
                             print("如果有障碍物但人说搜过了")
                             print(self.human_searched_rooms)
@@ -497,7 +509,9 @@ class BaselineAgent(ArtificialBrain):
                             self._answered = True
                             self._waiting = False
                             #有continue就是懒逼
-                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 3)
+                            #AlbertDiff: 如果人距离远的话，不忙帮搬是正常的，这里可以套用他给的论文里关于环境的影响，是客观。
+                            if self._distance_human == 'close': 
+                                self._trustBelief(self._team_members, trustBeliefs, self._folder, dw=0.30, dc=0.30)
                             # Add area to the to do list
                             self._to_search.append(self._door['room_name'])
                             self._phase = Phase.FIND_NEXT_GOAL
@@ -526,7 +540,7 @@ class BaselineAgent(ArtificialBrain):
 
                         # diff decrease trust
                         if (self.test_human > 0 and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
-                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
+                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.50, dc=0.20)
                             # self.human_searched_rooms.remove(self._door['room_name'])
                             print("如果有障碍物但人说搜过了")
                             print(self.human_searched_rooms)
@@ -547,7 +561,8 @@ class BaselineAgent(ArtificialBrain):
                                 -1] == 'Continue' and not self._remove:
                                 self._answered = True
                                 self._waiting = False
-                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 3)
+                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dc=0)
+                                # Albert Diff: 移动树与人的能力无关不应该扣分
                                 # Add area to the to do list
                                 self._to_search.append(self._door['room_name'])
                                 self._phase = Phase.FIND_NEXT_GOAL
@@ -582,7 +597,7 @@ class BaselineAgent(ArtificialBrain):
 
                         # diff decrease trust
                         if (self.test_human > 0 and not self._waiting and not self._answered and self._door['room_name'] in self.human_searched_rooms):
-                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
+                            self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.5, dc=0.2)
                             #self.human_searched_rooms.remove(self._door['room_name'])
                             print("如果有障碍物但人说搜过了")
                             print(self.human_searched_rooms)
@@ -610,7 +625,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._answered = True
                                 self._waiting = False
                                 # Add area to the to do list
-                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 3)
+                                self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.05, dc=0)
                                 self._to_search.append(self._door['room_name'])
                                 self._phase = Phase.FIND_NEXT_GOAL
                             # Remove the obstacle alone if the human decides so
@@ -833,7 +848,8 @@ class BaselineAgent(ArtificialBrain):
                     self.human_found_victim_logs.pop(self._goal_vic, None)
                     self.human_found_victims.remove(self._goal_vic)
                     #decrease trust
-                    self._trustBelief(self._team_members, trustBeliefs, self._folder, 2)
+                    self._trustBelief(self._team_members, trustBeliefs, self._folder, 2, dw=0.4, dc=0.3)
+                    # Albert Diff: Human 眼睛有问题，给他狠狠扣competence分
                     print("走到了 -------------- 4")
                     print("人撒谎，从human__found移除，decrease trust")
 
@@ -1221,7 +1237,7 @@ class BaselineAgent(ArtificialBrain):
                     trustBeliefs[self._human_name] = {'competence': competence, 'willingness': willingness}
         return trustBeliefs
 
-    def _trustBelief(self, members, trustBeliefs, folder, score):
+    def _trustBelief(self, members, trustBeliefs, folder, score, dc: int=0.10, dw: int=0.10):
         '''
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
@@ -1229,11 +1245,8 @@ class BaselineAgent(ArtificialBrain):
             trustBeliefs[self._human_name]['competence'] += 0.20
             trustBeliefs[self._human_name]['willingness'] += 0.20
         elif (score == 2):
-            trustBeliefs[self._human_name]['competence'] -= 0.10 * self.test_human
-            trustBeliefs[self._human_name]['willingness'] -= 0.10 * self.test_human
-        elif (score == 3):
-            trustBeliefs[self._human_name]['competence'] -= 0.00
-            trustBeliefs[self._human_name]['willingness'] -= 0.20 * self.test_human
+            trustBeliefs[self._human_name]['competence'] -= dc * self.test_human
+            trustBeliefs[self._human_name]['willingness'] -= dc * self.test_human
         # elif (score == 4):
         #     trustBeliefs[self._human_name]['competence'] -= 0.20
         #     trustBeliefs[self._human_name]['willingness'] -= 0.00
